@@ -2,7 +2,7 @@
 import crypto from "crypto";
 import {promises as fs} from "fs"
 
-const RUTA = "./productos.json";
+const RUTA = "./database/productos.json";
 
 //verificamos si existen todos los campos
 function checkExistCamps(product){
@@ -34,9 +34,21 @@ class ProductManager{
     }
 
     //obtnemos todos los productos
-    async getProducts(){
+    async getProducts(limit,res){
+        //obtenemos los productos
         let data = await fs.readFile(this.path,"utf-8");
-        return JSON.parse(data);
+        let response = JSON.parse(data);
+
+        //retornamos los productos, en caso de que exista limite, retornamos los deseados
+        if(limit && parseInt(limit) > 0){
+            return res.send(response.slice(0,limit))
+
+        }
+        //si no existe limit retornamos todos los resultados
+        else if(!limit){
+            return res.send(response);
+        }
+        return res.status(404).send("Ingrese un limit correcto")
     }
 
     //añadimos un nuevo producto y si ya existe le sumamos el stock
@@ -44,9 +56,10 @@ class ProductManager{
         try{
             checkExistCamps(product);
             //obtnemos los productos
-            let products = await this.getProducts();
+            let response = await fs.readFile(this.path,"utf-8");
+            let products = JSON.parse(response);
 
-            let indice = products.findIndex(item=>item.code == product.code);
+            let indice = products.findIndex((item)=>item.code == product.code)
 
             //agregamos el producto a nuestro archivo json
             if(indice == -1){
@@ -65,18 +78,20 @@ class ProductManager{
     }
 
     //obtenemos un producto segun su id
-    async getProductById(id){
+    async getProductById(id,res){
         try{
-            const products = await this.getProducts();
+            const products = await fs.readFile(this.path,"utf-8");
+            const response = JSON.parse(products);
         
-            const product = products.find(item=>item.id == id);
+            const product = response.find(item=>item.id == id);
             
             //si se encuentra el producto lo devolvemos, si no lanzamos una exepcion
             if(product){
-                return product;
+                return res.send(product);
             }
-    
-            throw new Error("Product not found");
+            
+            return res.send("No se ha encontrado el producto");
+
         }
         catch(e){
             console.log(e);
@@ -173,7 +188,7 @@ class Product {
 }
 
 //creamos nuestro product manager
-const procesadoresAmd = new ProductManager(RUTA);
+export const procesadoresAmd = new ProductManager(RUTA);
 
 
 //funcion para crear un nuevo producto con un id unico
@@ -188,8 +203,8 @@ const product1 = createProduct("Procesador ryzen 3600","Procesador serie 3000",2
 const product12 =  createProduct("Procesador ryzen 3700x","Procesador serie 3000",20,"../main",2,800);
 
 
-//añadimos un producto
-// await procesadoresAmd.addProduct(product12);
+// añadimos un producto
+// await procesadoresAmd.addProduct(product1);
 
 //obtenemos todos los productos
 // await procesadoresAmd.getProducts().then(info=>console.log(info));
