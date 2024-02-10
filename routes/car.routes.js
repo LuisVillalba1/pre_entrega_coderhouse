@@ -16,11 +16,11 @@ carstRouter.post("/",async (req,res)=>{
 })
 
 
-carstRouter.get("/:pid",async(req,res)=>{
+carstRouter.get("/:cid",async(req,res)=>{
     const cart = new carManager(carRoute);
-    const {pid} = req.params
+    const {cid} = req.params
 
-    await cart.getProductsCart(pid,res);
+    await cart.getProductsCart(cid,res);
 })
 
 carstRouter.post("/:cid/product/:pid",async(req,res)=>{

@@ -7,7 +7,7 @@ const app = express();
 app.use(express.json());
 app.use("/products",productRouter)
 app.use("/carts",carstRouter);
-const PORT = 4000;
+const PORT = 8080;
 
 app.listen(PORT,()=>{
     console.log(`servidor corriendo en el puerto:${PORT}`);
