@@ -4,7 +4,7 @@ import { carManager } from "../config/cartsManager.js";
 
 const carstRouter = Router();
 //obtenemos la ruta de nuestro json de los carritos
-const carRoute = "./database/car.json";
+const carRoute = "./src/database/car.json";
 
 //creamos un nuevo carrito
 carstRouter.post("/",async (req,res)=>{

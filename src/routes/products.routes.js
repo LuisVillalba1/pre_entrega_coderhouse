@@ -5,7 +5,7 @@ const productRouter = Router();
 
 
 productRouter.get("/",async(req,res)=>{
-    //en caso de que el usuario ingrese una query de limit
+    //en caso de que el usuario ingrese una query de 
     const {limit} = req.query;
     await procesadoresAmd.getProducts(limit,res)
 })

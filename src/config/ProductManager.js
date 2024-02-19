@@ -1,11 +1,108 @@
 //importamos crypto el cual nos va ayudar para poder generar ids unicos
 import crypto from "crypto";
-import {promises as fs} from "fs"
+import {promises as fs} from "fs";
+import { io } from "../app.js";
 
-const RUTA = "./database/productos.json";
+const RUTA = "./src/database/productos.json";
+
+//enviamos todos los productos
+export async function sendProducts(products,socket){
+    //enviamos todos los productos
+    socket.emit("products",products);
+}
+
+//eliminamos un producto
+export async function deleteProduct(databasePath,id,socket){
+    //obtenemos los productos
+    let data = await fs.readFile(databasePath,"utf-8");
+    let products = JSON.parse(data);
+
+    let index = products.findIndex(item=>item.id == id);
+
+    //verificamos si ya existe el mismo, en caso de que sea asi lo eliminamos
+    if(index >= 0){
+        products.splice(index,1);
+
+        await fs.writeFile(databasePath,JSON.stringify(products));
+        socket.emit("deletedProduct",id)
+    }
+}
+
+//update de un producto
+export async function updateProduct(databasePath,data,socket){
+    //obtenemos los productos
+    let response = await fs.readFile(databasePath,"utf-8");
+    let products = JSON.parse(response);
+
+    //si no se encuentra el producto por el id, lanzamos una exepcion
+    let indice = products.findIndex(item=>item.id == data.id);
+
+    if(indice == -1){
+        socket.emit("error","No se ha encontrado el producto")
+    }
+
+    //eliminamos la propiedad id, ya que no la vamos a utilizar
+    delete data.id;
+
+    //en caso de que se ingresen propiedades vacias las eliminamos
+    let objetValues = deleteProperties(data)
+
+    if(Object.values(objetValues).length == 0){
+        throw new Error("por favor ingrese algun valor")
+    }       
+
+    //cambiamos los valores del producto
+    let newValues = changeValues(objetValues,products[indice]);
+
+
+    await fs.writeFile(databasePath,JSON.stringify(products));
+
+    //enviamos los nuevos datos del producto
+    socket.emit("newProductData",newValues);
+}
+
+//creamos un nuevo producto
+export async function createProduct(databasePath,data,socket){
+    //verificamos que se ingresen propiedades validas con los tipos de valores correctos
+    chekIncorrectPropertys(data)
+
+    checkPropertys(data)
+    
+    let product = checkThumbnails(data);
+
+    //hacemos que el estatus del producto sea por defecto true
+    product.status = true;
+
+    //obtenemos los productos
+    let response = await fs.readFile(databasePath,"utf-8");
+    let products = JSON.parse(response);
+
+    let indice = products.findIndex((item)=>item.code == product.code);
+
+    //en caso de que ya exista ese producto enviamos un error
+    if(indice >= 0){
+        throw new Error("Ya existe el producto con el codigo " + product.code)
+    }
+    let id = crypto.randomBytes(10).toString("hex");
+    product.id = id;
+    //agregamos el producto a nuestra base de datos
+    products.push(product);
+    await fs.writeFile(databasePath,JSON.stringify(products));
+    socket.emit("newProduct",product)    
+}
+
+export function deleteProperties(object){
+    for(let key in object){
+        if(object[key] == "" || object[key] == NaN || object[key] == undefined){
+            delete object[key]
+        }
+    }
+    console.log(object)
+    return object
+}
 
 //le hacemos saber al usuario que propiedades son validas ingresar
-function chekIncorrectPropertys(product){
+export function chekIncorrectPropertys(product){
     let properties = ["title","description","code","status","stock","price","thumbnails","category"];
 
     for(let i in product){
@@ -15,7 +112,7 @@ function chekIncorrectPropertys(product){
     }
 }
 //verificamos que los campos tengan los valores correctos
-function checkPropertys(product){
+export function checkPropertys(product){
     //array para verificar que cada campo cuente su tipo de valor correspondiente
     let properties = [["title","string"],["description","string"],["code","string"],["price","number"],["stock","number"],["category","string"],["status","boolean"]]
 
@@ -29,8 +126,13 @@ function checkPropertys(product){
     }
 }
 
+function emitNewProduct(socket,newPorductData){
+    socket.emit("newProcut",newPorductData);
+}
+
+
 //verificamos si existe una ruta para el producto, en caso de que no,creamos una nueva
-function checkThumbnails(product){
+export function checkThumbnails(product){
     //en caso de que no exista la ruta de strings o agrege un array vacio lo creamos
     if(!product.thumbnails || !Array.isArray(product.thumbnails) || (product.thumbnails).length == 0){
         product.thumbnails = [(new Date).getTime()+product.title]
@@ -66,12 +168,11 @@ class ProductManager{
 
         //retornamos los productos, en caso de que exista limite, retornamos los deseados
         if(limit && parseInt(limit) > 0){
-            return res.send(response.slice(0,limit))
-
+            return res.render("realTimeProducts")
         }
         //si no existe limit retornamos todos los resultados
         else if(!limit){
-            return res.send(response);
+            return res.render("realTimeProducts");
         }
         return res.status(404).send("Ingrese un limit correcto")
     }
@@ -102,6 +203,7 @@ class ProductManager{
                 product.id = id;
                 //agregamos el producto a nuestra base de datos
                 products.push(product);
+                io.emit("newProduct",product)
                 await fs.writeFile(this.path,JSON.stringify(products));
                 return res.send("Producto añadido con exito")
             }
@@ -159,7 +261,10 @@ class ProductManager{
         //modificamos los valores y guardamos la informacion
         products[indice] = newValues;
 
+
         await fs.writeFile(this.path,JSON.stringify(products));
+
+        io.emit("newProductData",products[indice]);
 
         return res.status(201).send("Se ha modificado el objeto");
         }
@@ -187,6 +292,7 @@ class ProductManager{
             //eliminamos el producto
             products.splice(indeceProduct,1);
 
+            io.emit("deletedProduct",id);
             await fs.writeFile(this.path,JSON.stringify(products));
 
             return res.send("Se ha eliminado el producto :c");
@@ -201,7 +307,7 @@ class ProductManager{
 }
 
 //cambiamos los valores de un objeto segun otro dado
-function changeValues(newData,product){
+export function changeValues(newData,product){
     //verificamos que sea un objeto el que se haya ingresado
     if(typeof newData != "object" || Object.values(newData).length == 0){
         throw new Error("Por favor ingrese un objeto con propiedades");
@@ -229,6 +335,7 @@ function changeValues(newData,product){
             if(typeof product[i] != typeof newData[i]){
                 throw new Error(`Por favor ingrese un valor de tipo ${typeof product[i]} para la propiedad ${i}`)
             }
+            console.log(product[i])
             product[i] = newData[i]
         }
     }
@@ -238,9 +345,5 @@ function changeValues(newData,product){
 
 //creamos nuestro product manager
 export const procesadoresAmd = new ProductManager(RUTA);
-
-//creamos dos productos
-// const product1 = createProduct("Procesador ryzen 3600","Procesador serie 3000",20,"../main",1,400);
-// const product12 =  createProduct("Procesador ryzen 3700x","Procesador serie 3000",20,"../main",2,800);
 
 

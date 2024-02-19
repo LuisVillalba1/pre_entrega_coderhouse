@@ -1,0 +1,135 @@
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root{
+    --gris : rgb(150 150 150);
+    --amarillo : rgb(212, 245, 47);
+    --rojo : rgb(242, 7, 7);
+    --verde : rgb(0 240 0);
+}
+
+.main_title{
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.product_container{
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.product_container > div{
+    border: 1px solid var(--gris);
+    padding: 10px;
+}
+
+.remove_and_edit_container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.remove_and_edit_container div{
+    padding: 5px;
+    border: 1px solid var(--gris);
+}
+
+.edit_container{
+    background: var(--amarillo);
+}
+
+.delete_container{
+    background: var(--rojo);
+    cursor: pointer;
+}
+
+.create_product_container{
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+}
+
+.create_product_container a{
+    padding: 10px 5px;
+    border-radius: 15px;
+    background: var(--verde);
+    cursor: pointer;
+    text-decoration: none;
+}
+
+#form_container_edit{
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    position: relative;
+    display: none;
+}
+
+.content_form_edit{
+    margin-top: 30px;
+    width: 100%;
+    justify-content: center;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+.content_form_edit input{
+    max-width: 400px;
+}
+
+.error_edit{
+    width: 100%;
+    text-align: center;
+    font-size: 1.3em;
+    color: var(--rojo);
+}
+
+.edit_product_title{
+    padding-top: 20px;
+    text-align: center;
+}
+
+#close_form_edit{
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    cursor: pointer;
+}
+
+#form_create_product{
+    position: relative;
+    display: none;
+}
+
+#form_create_product i{
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    cursor: pointer;
+}
+
+#form_create_product h3{
+    margin-top: 10px;
+    padding-top: 20px;
+    text-align: center;
+}
+
+.error_create{
+    width: 100%;
+    text-align: center;
+    font-size: 1.3em;
+    color: var(--rojo);
+}
+
+
+
+
