@@ -1,7 +1,9 @@
 import {promises as fs} from "fs"
+import { cartsModel } from "../models/cartsModel.js";
+import { productModel } from "../models/productsModel.js";
 export class carManager{
-    constructor(path){
-        this.path = path
+    constructor(){
+        
     }
 
     async createCar(id,res) {
@@ -24,19 +26,14 @@ export class carManager{
     //obtenemos los productos de cierto carrito
     async getProductsCart(id,res){
         try{
-            //obtenemos todos los carritos
-            const response = await fs.readFile(this.path,"utf-8");
+            const cart = await cartsModel.findById(id);
+            console.log(cart)
 
-            const cars = JSON.parse(response);
-            
-            //buscamos un carrito
-            const indice = cars.findIndex(item=>item.id == id);
-    
-            if(indice <= -1){
+            if(!cart){
                 throw new Error("No se ha encontrado el carrito");
             }
             //retornamos en caso de que se encuentre el carrito los productos que este posee
-            return res.send(cars[indice].products);
+            return res.send(cart);
         }
         catch(e){
             if(e instanceof Error){
@@ -49,42 +46,30 @@ export class carManager{
     //verificamos que exista el producto
     async getProduct(id){
         
-        const productRoute = "./database/productos.json";
+        let product = await productModel.findById(id)
 
-        const responseProducts = await fs.readFile(productRoute,"utf-8");
-
-        const products = JSON.parse(responseProducts);
-
-        const indice = products.findIndex(item=>item.id == id);
-
-        if(indice <= -1){
+        if(!product){
             throw new Error("No se ha encontrado el producto que desea agregar al carrito")
         }
 
     }
 
     //obtenemos el carrito del usuario
-    async getCart(carts,id){
+    async getCart(id){
 
-        const indice = carts.findIndex(item=> item.id == id);
+        const cart = await cartsModel.findById(id);
 
-        if(indice <= -1){
+        if(!cart){
             throw new Error("No se ha encontrado el carrito solicitado");
         }
 
-        return carts[indice];
+        return cart;
     }
 
     async addProduct(id,productID,quantity,res){
         try{
-            //obtenemos todos los carritos
-            const response = await fs.readFile(this.path,"utf-8");
-
-            const carts = JSON.parse(response);
-
             //obtenemos el carrito del usuario
-            const cart = await this.getCart(carts,id);
-            
+            const cart = await this.getCart(id);
             //verificamos que el producto que quiera añadir exista
             await this.getProduct(productID);
 
@@ -97,10 +82,10 @@ export class carManager{
             }
             //en caso de que si se encuentre sumamos la cantidad del producto
             else{
-                cart.products[indice].quantity += quantity
+                cart.products[indice].quantity = quantity
             }
-
-            await fs.writeFile(this.path,JSON.stringify(carts));
+            //modificamos el carrito
+            await cartsModel.findByIdAndUpdate(cart._id,cart);
 
             return res.send("Se ha añadido el producto correctamente");
 

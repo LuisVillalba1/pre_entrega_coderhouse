@@ -2,6 +2,7 @@
 import crypto from "crypto";
 import {promises as fs} from "fs";
 import { io } from "../app.js";
+import { productModel } from "../models/productsModel.js";
 
 const RUTA = "./src/database/productos.json";
 
@@ -12,37 +13,24 @@ export async function sendProducts(products,socket){
 }
 
 //eliminamos un producto
-export async function deleteProduct(databasePath,id,socket){
-    //obtenemos los productos
-    let data = await fs.readFile(databasePath,"utf-8");
-    let products = JSON.parse(data);
-
-    let index = products.findIndex(item=>item.id == id);
-
+export async function deleteProduct(id,socket){
+    //obtenemos el producto
+    let product = await productModel.findByIdAndDelete(id);;
     //verificamos si ya existe el mismo, en caso de que sea asi lo eliminamos
-    if(index >= 0){
-        products.splice(index,1);
-
-        await fs.writeFile(databasePath,JSON.stringify(products));
-        socket.emit("deletedProduct",id)
+    if(product){
+        socket.emit("deletedProduct",product._id)
     }
+    throw new Error("No se ha encontrado el producto solicitado")
 }
 
 //update de un producto
-export async function updateProduct(databasePath,data,socket){
-    //obtenemos los productos
-    let response = await fs.readFile(databasePath,"utf-8");
-    let products = JSON.parse(response);
+export async function updateProduct(data,socket){
+    //obtenemos el producto en cuestion
+    let product = await productModel.findById(data.id);
 
-    //si no se encuentra el producto por el id, lanzamos una exepcion
-    let indice = products.findIndex(item=>item.id == data.id);
-
-    if(indice == -1){
+    if(!product){
         socket.emit("error","No se ha encontrado el producto")
     }
-
-    //eliminamos la propiedad id, ya que no la vamos a utilizar
-    delete data.id;
 
     //en caso de que se ingresen propiedades vacias las eliminamos
     let objetValues = deleteProperties(data)
@@ -52,17 +40,15 @@ export async function updateProduct(databasePath,data,socket){
     }       
 
     //cambiamos los valores del producto
-    let newValues = changeValues(objetValues,products[indice]);
-
-
-    await fs.writeFile(databasePath,JSON.stringify(products));
+    let newValues = await changeValues(objetValues,product);
+    console.log(newValues)
 
     //enviamos los nuevos datos del producto
     socket.emit("newProductData",newValues);
 }
 
 //creamos un nuevo producto
-export async function createProduct(databasePath,data,socket){
+export async function createProduct(data,socket){
     //verificamos que se ingresen propiedades validas con los tipos de valores correctos
     chekIncorrectPropertys(data)
 
@@ -73,21 +59,14 @@ export async function createProduct(databasePath,data,socket){
     //hacemos que el estatus del producto sea por defecto true
     product.status = true;
 
-    //obtenemos los productos
-    let response = await fs.readFile(databasePath,"utf-8");
-    let products = JSON.parse(response);
+    //obtenemos un producto por el codigo y verificiamos si este ya existe
+    let productFound = await productModel.findOne({code : product.code});
 
-    let indice = products.findIndex((item)=>item.code == product.code);
-
-    //en caso de que ya exista ese producto enviamos un error
-    if(indice >= 0){
+    if(productFound){
         throw new Error("Ya existe el producto con el codigo " + product.code)
     }
-    let id = crypto.randomBytes(10).toString("hex");
-    product.id = id;
-    //agregamos el producto a nuestra base de datos
-    products.push(product);
-    await fs.writeFile(databasePath,JSON.stringify(products));
+    //creamos el nuevo producto
+    product = await productModel.create(product);
     socket.emit("newProduct",product)    
 }
 
@@ -97,7 +76,6 @@ export function deleteProperties(object){
             delete object[key]
         }
     }
-    console.log(object)
     return object
 }
 
@@ -161,20 +139,8 @@ class ProductManager{
     }
 
     //obtnemos todos los productos
-    async getProducts(limit,res){
-        //obtenemos los productos
-        let data = await fs.readFile(this.path,"utf-8");
-        let response = JSON.parse(data);
-
-        //retornamos los productos, en caso de que exista limite, retornamos los deseados
-        if(limit && parseInt(limit) > 0){
-            return res.render("realTimeProducts")
-        }
-        //si no existe limit retornamos todos los resultados
-        else if(!limit){
-            return res.render("realTimeProducts");
-        }
-        return res.status(404).send("Ingrese un limit correcto")
+    async getProducts(res){
+        return res.render("realTimeProducts")
     }
 
     //añadimos un nuevo producto y si ya existe le sumamos el stock
@@ -191,25 +157,18 @@ class ProductManager{
             product.status = true;
 
             //obtnemos los productos
-            let response = await fs.readFile(this.path,"utf-8");
-            let products = JSON.parse(response);
+            let productFound = await productModel.findOne({code : product.code});
 
-            let indice = products.findIndex((item)=>item.code == product.code)
+            //en caso de que no exista un producto con ese codigo lo agregamos a nuestra base de datos
+            if(!productFound){
+                //agregamos el producto a la base de datos
+                let newProduct = await productModel.create(product);
 
-            //agregamos el producto a nuestro archivo json
-            if(indice == -1){
-                //creamos un codigo unico
-                let id = crypto.randomBytes(10).toString("hex");
-                product.id = id;
-                //agregamos el producto a nuestra base de datos
-                products.push(product);
-                io.emit("newProduct",product)
-                await fs.writeFile(this.path,JSON.stringify(products));
+                io.emit("newProduct",newProduct)
                 return res.send("Producto añadido con exito")
             }
-            //sumamos el stock del producto correspondiente
-            products[indice].stock += product.stock;
-            await fs.writeFile(this.path,JSON.stringify(products));
+            //en caso de que ya exista, modificamos su stock
+            await productModel.findByIdAndUpdate(productFound.id,{stock : product.stock})
             return res.send("Producto añadido con exito")
         }
         catch(e){
@@ -223,10 +182,7 @@ class ProductManager{
     //obtenemos un producto segun su id
     async getProductById(id,res){
         try{
-            const products = await fs.readFile(this.path,"utf-8");
-            const response = JSON.parse(products);
-        
-            const product = response.find(item=>item.id == id);
+            const product = await productModel.findById(id);
             
             //si se encuentra el producto lo devolvemos, si no lanzamos una exepcion
             if(product){
@@ -244,27 +200,17 @@ class ProductManager{
     //modificamos un producto segun su id y nuevos valores ingresados
     async updateProduct(id,newData,res){
         try{
-        //obtenemos los productos
-        let response = await fs.readFile(this.path,"utf-8");
-        let products = JSON.parse(response);
+        //obtenemos el producto
+        let product = await productModel.findById(id);
 
-        //si no se encuentra el producto por el id, lanzamos una exepcion
-        let indice = products.findIndex(item=>item.id == id);
-
-        if(indice == -1){
+        if(!product){
             return res.status(404).send("No se ha encontrado el producto en especifico");
         }
 
         //obtenemos el producto en concreto con los nuevos valores
-        let newValues = changeValues(newData,products[indice]);
+        let newValuesProduct = await changeValues(newData,product);
 
-        //modificamos los valores y guardamos la informacion
-        products[indice] = newValues;
-
-
-        await fs.writeFile(this.path,JSON.stringify(products));
-
-        io.emit("newProductData",products[indice]);
+        io.emit("newProductData",newValuesProduct);
 
         return res.status(201).send("Se ha modificado el objeto");
         }
@@ -279,21 +225,14 @@ class ProductManager{
     //eliminamos un producto segun el id
     async deleteProduct(id,res){
         try{
-            //obtenemos todos los productos y verificamos que exista el producto ingresado
-            const response = await fs.readFile(this.path,"utf-8");
-            const products = JSON.parse(response);
+            //eliminamos el producto
+            let product = await productModel.findByIdAndDelete(id);
 
-            const indeceProduct = products.findIndex(item=>item.id == id);
-    
-            if(indeceProduct == -1){
+            if(!product){
                 throw new Error("No se ha encontrado el producto")
             }
-
-            //eliminamos el producto
-            products.splice(indeceProduct,1);
-
-            io.emit("deletedProduct",id);
-            await fs.writeFile(this.path,JSON.stringify(products));
+            //lo emitimos en nuestro socket
+            io.emit("deletedProduct",product._id);
 
             return res.send("Se ha eliminado el producto :c");
         }
@@ -307,22 +246,19 @@ class ProductManager{
 }
 
 //cambiamos los valores de un objeto segun otro dado
-export function changeValues(newData,product){
+export async function changeValues(newData,product){
     //verificamos que sea un objeto el que se haya ingresado
     if(typeof newData != "object" || Object.values(newData).length == 0){
         throw new Error("Por favor ingrese un objeto con propiedades");
     }
+    //eliminamos la propiedad id
+    delete newData.id
 
     //obtenemos las propiedades del nuevo objeto
     let newDataProperties = Object.keys(newData);
     
-    //no permitimos que el nuevo objeto tenga la propiedad id, ya que no lo queremos modificar
-    if(newDataProperties.includes("id")){
-        throw new Error("No se puede ingresar la propiedad id");
-    }
-
     //obtenemos las propiedades del producto a modificar
-    let properties = Object.keys(product);
+    let properties = Object.keys(product._doc);
 
     //modificamos los valores del producto viejo
     for(let i in newData){
@@ -335,12 +271,11 @@ export function changeValues(newData,product){
             if(typeof product[i] != typeof newData[i]){
                 throw new Error(`Por favor ingrese un valor de tipo ${typeof product[i]} para la propiedad ${i}`)
             }
-            console.log(product[i])
-            product[i] = newData[i]
         }
     }
-
-    return product;
+    //modificamos el producto
+    // con new : true hacemos que nos devuelva el nuevo objeto generado
+    return await productModel.findByIdAndUpdate(product.id,newData,{new : true});
 }
 
 //creamos nuestro product manager

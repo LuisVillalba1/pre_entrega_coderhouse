@@ -1,6 +1,6 @@
 import { Router } from "express";
-import crypto from "crypto"
 import { carManager } from "../config/cartsManager.js";
+import { cartsModel } from "../models/cartsModel.js";
 
 const carstRouter = Router();
 //obtenemos la ruta de nuestro json de los carritos
@@ -8,23 +8,23 @@ const carRoute = "./src/database/car.json";
 
 //creamos un nuevo carrito
 carstRouter.post("/",async (req,res)=>{
-    const id = crypto.randomBytes(10).toString("hex");
+    let newCart = await cartsModel.create({});
 
-    const newCar = new carManager(carRoute);
-
-    await newCar.createCar(id,res);
+    return res.json({
+        message : `El id de su carrito es: ${newCart._id}`
+    })
 })
 
-
+//obtenemos cierto carrito
 carstRouter.get("/:cid",async(req,res)=>{
-    const cart = new carManager(carRoute);
+    const cart = new carManager();
     const {cid} = req.params
 
     await cart.getProductsCart(cid,res);
 })
 
 carstRouter.post("/:cid/product/:pid",async(req,res)=>{
-    const cart = new carManager(carRoute);
+    const cart = new carManager();
 
     //obtenemos la cantidad del producto que se desea añadir
     const {quantity} = req.body;

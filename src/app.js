@@ -1,13 +1,12 @@
 import express from "express";
-import productRouter from "./routes/products.routes.js"
-import carstRouter from "./routes/car.routes.js";
 import { engine } from "express-handlebars";
 import {fileURLToPath} from "url";
 import path, { dirname } from "path";
 import { Server } from "socket.io";
-import {promises as fs} from "fs";
 import * as productManagerUtils from "./config/ProductManager.js";
-import crypto from "crypto";
+import mongoose from "mongoose";
+import { productModel } from "./models/productsModel.js";
+import indexRouter from "./routes/index.routes.js";
 const app = express();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -19,27 +18,29 @@ const server = app.listen(PORT,()=>{
 });
 
 //creamos nuestro servidor con socket.io
-
 export const io = new Server(server);
+
+//coneccion con la base de datos 
+
+mongoose.connect("mongodb+srv://luisvillalb03:realg4li@coder.1vbxxvc.mongodb.net/?retryWrites=true&w=majority&appName=coder")
+.then(console.log("conneccion exitosa"))
+.catch((e)=>console.log(e))
+
 
 io.on("connection",async (socket)=>{
     console.log("cliente conectado");
 
-    let databasePath = path.join(__dirname,"database","productos.json")
-
     //obtenemos los productos
-    let data = await fs.readFile(databasePath,"utf-8");
-    let products = JSON.parse(data);
+    let products = await productModel.find();
 
     await productManagerUtils.sendProducts(products,socket)
 
     //eliminamos un producto
     socket.on("deleteProduct",async(id)=>{
         try{
-            await productManagerUtils.deleteProduct(databasePath,id,socket)
+            await productManagerUtils.deleteProduct(id,socket)
         }
         catch(e){
-            console.log(e)
             socket.emit("errorDelete",e.message);
         }
 
@@ -48,8 +49,7 @@ io.on("connection",async (socket)=>{
     //update de un producto
     socket.on("updateProduct",async(data)=>{
         try{
-
-            productManagerUtils.updateProduct(databasePath,data,socket)
+            productManagerUtils.updateProduct(data,socket)
         }
         catch(e){
             //en caso de que ocurra un error lo enviamos
@@ -59,7 +59,7 @@ io.on("connection",async (socket)=>{
 
     socket.on("createProduct",async data=>{
         try{
-            productManagerUtils.createProduct(databasePath,data,socket)
+            productManagerUtils.createProduct(data,socket)
         }
         catch(e){
             socket.emit("errorCreate",e.message);
@@ -76,8 +76,6 @@ app.set("view engine","handlebars");
 app.set("views",path.join(__dirname,"views"));
 
 //routes
-app.use("/carts",carstRouter);
-app.use("/products",productRouter)
-
+app.use(indexRouter)
 
 

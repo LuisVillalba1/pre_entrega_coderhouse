@@ -7,6 +7,11 @@ socket.on("products",(info)=>{
     showProducts(info)
 })
 
+//mostramos el nuevo producto creado
+socket.on("newProduct",(info)=>{
+    $(productsContainer).append(createProduct(info));
+})
+
 //eliminamos un producto
 socket.on("deletedProduct",(info)=>{
     deleteProduct(info);
@@ -14,7 +19,7 @@ socket.on("deletedProduct",(info)=>{
 
 //modificamos los valores de cierto producto
 socket.on("newProductData",(info)=>{
-    updateProduct(info.id,info)
+    updateProduct(info._id,info)
 })
 
 function deleteProduct(id){
@@ -23,9 +28,10 @@ function deleteProduct(id){
 
 function showProducts(info){
     for(let i of info){
+        console.log(i)
         //añadimos los productos al dom
         //cada ves que haya uno nuevo lo mostramos
-        if(chekExisteProduct(i.id)){
+        if(chekExisteProduct(i._id)){
             $(productsContainer).append(createProduct(i));
 
         }
@@ -95,7 +101,7 @@ function createProduct(product){
     //creamos un contenedor que contendra cada producto
     let productContainer = $("<div></div>")
     $(productContainer).addClass("product_container");
-    $(productContainer).attr("id", product.id);
+    $(productContainer).attr("id", product._id);
 
     //el contenedor de la imagen junto a la imagen en cuestion
     let imgContainer = $("<div></div>");
@@ -105,30 +111,30 @@ function createProduct(product){
     $(img).attr("id", product.id + "_img");
     $(img).attr("src",product.thumbnails[0]);
 
-    $(productContainer).append(showData(product.id,product.category,"Categoria","category_container","_category"));
+    $(productContainer).append(showData(product._id,product.category,"Categoria","category_container","_category"));
 
     $(imgContainer).append(img);
     $(productContainer).append(imgContainer);
 
     //nombre del producto
-    productContainer.append(showData(product.id,product.title,"Titulo","title_product_container","_title"))
+    productContainer.append(showData(product._id,product.title,"Titulo","title_product_container","_title"))
 
     //descripcion del producto
-    productContainer.append(showData(product.id,product.description,"Descripcion","description_container","_description"))
+    productContainer.append(showData(product._id,product.description,"Descripcion","description_container","_description"))
     //precio del producto
-    productContainer.append(showData(product.id,product.price,"Precio","price_container","_price"))
+    productContainer.append(showData(product._id,product.price,"Precio","price_container","_price"))
 
     //mostramos el codigo
-    productContainer.append(showData(product.id,product.code,"Code","code_container","_code"))
+    productContainer.append(showData(product._id,product.code,"Code","code_container","_code"))
 
     //permitimos editar y eliminar el producto
     let removeAndEdit = $("<div></div>");
     $(removeAndEdit).addClass("remove_and_edit_container");
 
-    removeAndEdit.append(addEditProduct(product.id))
-    removeAndEdit.append(addDeleteProcut(product.id))
+    removeAndEdit.append(addEditProduct(product._id))
+    removeAndEdit.append(addDeleteProcut(product._id))
 
-    $(productContainer).append(showData(product.id,product.stock,"Stock","stock_container","_stock"));
+    $(productContainer).append(showData(product._id,product.stock,"Stock","stock_container","_stock"));
     $(productContainer).append(removeAndEdit);
 
     return productContainer;

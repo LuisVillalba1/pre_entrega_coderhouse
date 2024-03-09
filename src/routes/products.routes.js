@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { procesadoresAmd } from "../config/ProductManager.js";
+import { productModel } from "../models/productsModel.js";
 
 const productRouter = Router();
 
 
 productRouter.get("/",async(req,res)=>{
-    //en caso de que el usuario ingrese una query de 
-    const {limit} = req.query;
-    await procesadoresAmd.getProducts(limit,res)
+    //mostramos la vista de productos
+    await procesadoresAmd.getProducts(res)
 })
 
 //obtenemos cierto producto
