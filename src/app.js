@@ -22,7 +22,7 @@ export const io = new Server(server);
 
 //coneccion con la base de datos 
 
-mongoose.connect("mongodb+srv://luisvillalb03:realg4li@coder.1vbxxvc.mongodb.net/?retryWrites=true&w=majority&appName=coder")
+mongoose.connect("mongodb+srv://luisvillalb03:password@coder.1vbxxvc.mongodb.net/?retryWrites=true&w=majority&appName=coder")
 .then(console.log("conneccion exitosa"))
 .catch((e)=>console.log(e))
 
