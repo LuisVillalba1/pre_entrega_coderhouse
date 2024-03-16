@@ -22,7 +22,7 @@ export const io = new Server(server);
 
 //coneccion con la base de datos 
 
-mongoose.connect("mongodb+srv://luisvillalb03:password@coder.1vbxxvc.mongodb.net/?retryWrites=true&w=majority&appName=coder")
+mongoose.connect("mongodb+srv://luisvillalb03:realg4li@coder.1vbxxvc.mongodb.net/?retryWrites=true&w=majority&appName=coder")
 .then(console.log("conneccion exitosa"))
 .catch((e)=>console.log(e))
 
@@ -31,9 +31,9 @@ io.on("connection",async (socket)=>{
     console.log("cliente conectado");
 
     //obtenemos los productos
-    let products = await productModel.find();
+    // let products = await productModel.find();
 
-    await productManagerUtils.sendProducts(products,socket)
+    // await productManagerUtils.sendProducts(products,socket)
 
     //eliminamos un producto
     socket.on("deleteProduct",async(id)=>{
@@ -78,4 +78,7 @@ app.set("views",path.join(__dirname,"views"));
 //routes
 app.use(indexRouter)
 
+
+// const response = await productModel.paginate({},{limit : 2 , page : 1});
+// console.log(response)
 

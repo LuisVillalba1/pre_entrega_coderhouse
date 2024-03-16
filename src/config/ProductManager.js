@@ -23,6 +23,59 @@ export async function deleteProduct(id,socket){
     throw new Error("No se ha encontrado el producto solicitado")
 }
 
+//verificamos que el limit ingresado sea un numero mayor a 0
+function isCorrectNumber(value,property){
+    if(isNaN(parseInt(value)) || parseInt(value) <= 0){
+        throw new Error(`${property} ingresado invalido,por favor ingrese un numero mayor a 0`)
+    }
+    return parseInt(value)
+}
+
+//la query ingresada por el usuario va tener que tener un formato de json 
+function queryProdcuts(query,res){
+    try{
+        //parseamos el ojeto 
+        query = JSON.parse(query);
+        if(typeof query != "object"){
+            throw new Error("Por favor ingrese un objeto json para ordenar los productos")
+        }
+    return query
+    }
+    catch(e){
+        throw new Error("Por favor ingrese un objeto json para ordenar los productos")
+    }
+}
+
+//verificamamos que el ordenamiento sea ascendente o descendente
+function correctSort(value){
+    if(value != "asc" && value != "desc"){
+        throw new Error("solo se permiten ordenamientos por desc y asc")
+    }
+}
+//verificamos que el ordenamiento de productos solo sea por el precio
+
+//filtramos obtenemos las querys de la request
+async function filterProducts(req,res){
+    //obtenemos cada uno de los valores de las querys
+    let {limit,page,query,sort} = req.query;
+    if(limit){
+        limit = isCorrectNumber(limit,"limit");
+    }
+    if(page){
+        page = isCorrectNumber(page,"page");
+    }
+    if(query){
+        query = queryProdcuts(query,res);
+    }
+    if(sort){
+        correctSort(sort);
+    }
+    //paginamos los productos
+    return await productModel.paginate(query || {},{limit : limit ? limit : 10,page : page ? page : 1, sort : sort ? {price : sort} : {}})
+}
+
+
+
 //update de un producto
 export async function updateProduct(data,socket){
     //obtenemos el producto en cuestion
@@ -41,7 +94,6 @@ export async function updateProduct(data,socket){
 
     //cambiamos los valores del producto
     let newValues = await changeValues(objetValues,product);
-    console.log(newValues)
 
     //enviamos los nuevos datos del producto
     socket.emit("newProductData",newValues);
@@ -139,8 +191,8 @@ class ProductManager{
     }
 
     //obtnemos todos los productos
-    async getProducts(res){
-        return res.render("realTimeProducts")
+    async getProducts(req,res){
+        return await filterProducts(req,res)
     }
 
     //añadimos un nuevo producto y si ya existe le sumamos el stock

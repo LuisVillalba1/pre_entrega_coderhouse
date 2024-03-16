@@ -6,8 +6,16 @@ const productRouter = Router();
 
 
 productRouter.get("/",async(req,res)=>{
-    //mostramos la vista de productos
-    await procesadoresAmd.getProducts(res)
+    //obtenemos los productos correspondientes
+    try{
+        return res.send(await procesadoresAmd.getProducts(req,res))
+    }
+    catch(e){
+        if(e instanceof Error){
+            return res.status(404).send(e.message)
+        }
+        return res.send(e);
+    }
 })
 
 //obtenemos cierto producto

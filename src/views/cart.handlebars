@@ -1,0 +1,36 @@
+<h2>Mi carrito</h2>
+<div class="cart_content">
+    {{#if products.length}}
+    <ul>
+        {{#each products}}
+        <li>
+            <div class="img_product_container">
+                {{#if this.productID.thumbnails.length}}
+                <img src={{this.productID.thumbnails}} alt="{{this.productID.title}}">
+                {{else}}
+                <img src="" alt="{{this.productID.title}}">
+                {{/if}}
+            </div>
+            <div class="product_description_container">
+                <h4>{{this.productID.title}}</h4>
+                <p>{{this.productID.description}}</p>
+            </div>
+            <div class="product_count_container">
+                <h4>Cantidad:</h4>
+                <b>{{this.quantity}}</b>
+            </div>
+            <div class="price_container">
+                <h4>Pecio Por unidad</h4>
+                <b>{{this.productID.price}}</b>
+            </div>
+            <div class="total_price_product">
+                <h4>Precio</h4>
+                <b>{{this.productID.totalPrice}}</b>
+            </div>
+        </li>
+        {{/each}}
+    </ul>
+    {{else}}
+    <h4 class="no_content_title">Su carrito actualmente se encuentra vacio</h3>
+    {{/if}}
+</div>
